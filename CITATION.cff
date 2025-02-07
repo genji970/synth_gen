@@ -1,0 +1,9 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "Synth Gen"
+version: "0.1.0"
+authors:
+  - name: "Olivier Duchenne"
+    affiliation: "Meta, FAIR"
+date-released: 2025-01-07
+url: "https://github.com/facebookresearch/synth_gen"

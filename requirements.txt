@@ -1,0 +1,15 @@
+together
+python-dotenv
+dpath
+autopep8
+langchain
+langchain_together
+langchain-community
+mypy
+ruff
+requests
+pipreqs
+mmh3
+diskcache
+datasets
+tqdm

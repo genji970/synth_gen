@@ -37,6 +37,25 @@ if "LLM" in os.environ:
             model="meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo",
             max_tokens=8192,
         )
+    elif os.environ["LLM"] == "qwen_local":
+        import torch
+        from langchain_huggingface import (
+            ChatHuggingFace,
+            HuggingFacePipeline,
+        )
+
+        local_pipeline = HuggingFacePipeline.from_model_id(
+            model_id="Qwen/Qwen2.5-1.5B-Instruct",
+            task="text-generation",
+            device=0 if torch.cuda.is_available() else -1,
+            pipeline_kwargs={
+                "max_new_tokens": 512,
+                "do_sample": False,
+                "return_full_text": False,
+            },
+        )
+        default_llm = ChatHuggingFace(llm=local_pipeline)
+        
     elif os.environ["LLM"] == "together_llama3_1_70B":
         default_llm = ChatTogether(
             model="meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo",

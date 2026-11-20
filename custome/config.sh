@@ -1,0 +1,4 @@
+export LLM="qwen_local"
+export SYNTHGEN_REMOTE_TOKEN="RqNZat14dVqQ_ns0uijPHPIYIEc3lGAJ_BOk7CKR898"
+
+export SYNTHGEN_USE_REMOTE_PODMAN=1

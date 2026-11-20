@@ -246,3 +246,13 @@ RUN pip3 install pytest pytest-json-report coverage
                 return report, stdout, stderr, return_code
             finally:
                 container.clean_up()
+
+
+# Remote Podman execution
+if os.environ.get("SYNTHGEN_USE_REMOTE_PODMAN") == "1":
+    from custome.podman_generating import (
+        execute_python,
+        run_pytest,
+        run_test_coverage,
+    )
+

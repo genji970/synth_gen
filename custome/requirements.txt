@@ -1,0 +1,16 @@
+numpy==1.26.4
+pandas==2.2.3
+pyarrow==19.0.1
+scikit-learn==1.6.1
+matplotlib==3.10.1
+huggingface-hub==0.34.4
+ddgs==9.6.0
+
+verl[vllm]==0.5.0
+vllm==0.8.5
+torchvision==0.21.0
+torchaudio==2.6.0
+tensordict==0.9.1
+ray[default,cgraph]==2.46.0
+tokenizers==0.21.2
+opencv-python-headless==4.11.0.86

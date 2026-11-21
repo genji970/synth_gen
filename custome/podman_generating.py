@@ -20,15 +20,16 @@ def remote_execute(
         "parse_json" : parse_json,
     }).encode("utf-8")
 
-    request=Request(
+    request = Request(
         url=REMOTE_URL + "/execute",
         data=payload,
         method="POST",
         headers={
-
-        }
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        },
     )
-
+    
     try:
         with urlopen(
             request,

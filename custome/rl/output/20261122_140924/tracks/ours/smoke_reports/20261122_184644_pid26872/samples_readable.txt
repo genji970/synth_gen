@@ -1,0 +1,361 @@
+
+================ SAMPLE 1/4 ================
+[1] SEED: Fibonacci with a twist.
+[2] QUESTION / PROBLEM:
+**Problem Statement:**
+
+Given two positive integers `a` and `b`, your task is to compute the sum of the first `n` Fibonacci numbers where each number is generated using modular arithmetic with base `p`. Specifically:
+
+- Initialize the sequence with the first two terms: `fib(0) = a` and `fib(1) = b`.
+- Generate subsequent terms of the Fibonacci sequence using the formula:
+  \[
+  fib(n) = (fib(n-1) + fib(n-2)) \mod p
+  \]
+- Compute the sum of the first `n` terms of this modified Fibonacci sequence.
+
+The goal is to return the sum modulo `p`.
+
+**Inputs:**
+- Two positive integers `a` and `b`, representing the first two terms of the modified Fibonacci sequence.
+- One additional positive integer `n`, indicating how many terms should be summed.
+
+**Outputs:**
+- The sum of the first `n` terms of the modified Fibonacci sequence modulo `p`.
+
+**Initial Conditions:**
+- If `a == 0` and `b == 0`, set `fib(0) = 0` and `fib(1) = 0` since both will always be zero.
+- Ensure that `p` is greater than any possible value in the input parameters.
+
+**Edge Cases:**
+- If `p` is less than or equal to one of the inputs (`a` or `b`), the program should handle this case gracefully without crashing.
+- For large values of `n` and `p`, consider optimizing the computation to avoid overflow issues.
+
+**Mathematical Definition:**
+For the given inputs `a`, `b`, and `n`, let `sum_mod_p(n)` denote the sum of the first `n` terms of the modified Fibonacci sequence modulo `p`. Your task is to implement `sum_mod_p(a, b, n)`.
+[3] MODEL PREDICTION / CODE:
+def mod_fibonacci_sum(a, b, n, p=998244353):
+    """
+    Computes the sum of the first n Fibonacci numbers generated using modular arithmetic,
+    where each term is computed as fib(n) = (fib(n-1) + fib(n-2)) % p for n >= 2,
+    starting from fib(0) = a and fib(1) = b.
+    
+    Parameters:
+    - a: A positive integer representing the first term of the sequence.
+    - b: A positive integer representing the second term of the sequence.
+    - n: An integer denoting the number of terms to sum up.
+    - p: The modulus for the operation (default is 998244353).
+    
+    Returns:
+    - The sum of the first n terms of the modified Fibonacci sequence modulo p.
+    """
+
+    # Base cases: if either a or b is 0, then all Fibonacci numbers will also be 0
+    if a == 0 and b == 0:
+        return 0
+    
+    # Initial conditions: fib(0) = a, fib(1) = b
+    if n == 1:
+        return a
+    
+    fib_sequence = [a, b]
+
+    # Compute the next terms until we reach enough terms to cover 'n'
+    while len(fib_sequence) < n:
+        new_term = (fib_sequence[-1] + fib_sequence[-2]) % p
+        fib_sequence.append(new_term)
+
+    # Sum the terms and return modulo p
+    result_sum = sum(fib_sequence[:n])
+    return result_sum % p
+
+
+# Example usage
+result = mod_fibonacci_sum(2, 3, 7)
+print(result)  # Expected output depends on the specific implementation details
+[4] GENERATED PYTEST:
+def sum_mod_p(a, b, n):
+    # Edge cases: if either a or b is 0, then all Fibonacci numbers will also be 0
+    if a == 0 and b == 0:
+        return 0
+    
+    # Initial conditions: fib(0) = a, fib(1) = b
+    fib_sequence = [a, b]
+    
+    # Compute the next terms until we reach enough terms to cover 'n'
+    while len(fib_sequence) < n:
+        new_term = (fib_sequence[-1] + fib_sequence[-2]) % 998244353  # Using prime modulus to avoid overflow
+        fib_sequence.append(new_term)
+    
+    # Sum the terms and return modulo p
+    result_sum = sum(fib_sequence[:n])
+    return result_sum % 998244353
+
+
+# Test function to check correctness
+def test_sum_mod_p():
+    assert sum_mod_p(2, 3, 7) % 998244353 == 17
+    assert sum_mod_p(1, 1, 5) % 998244353 == 1
+    assert sum_mod_p(5, 8, 13) % 998244353 == 46
+    assert sum_mod_p(10, 11, 21) % 998244353 == 117
+
+test_sum_mod_p()
+[5] VERDICTS:
+  synth_gen: FAIL | failed_verifier=PythonTestBasedVerifier
+  Podman pytest: SKIPPED | status=invalid_test | invalid input before execution
+  FINAL: 정답 여부 미판정 — 생성된 테스트 자체가 유효하지 않음 — 코드 정오 미판정
+[6] FAILURE REASON / EVIDENCE:
+  synth_gen: InvalidGeneratedTest: Test redefines predicted function(s): sum_mod_p
+  pytest: Generated test never calls the model-predicted function
+[7] WHAT TO FIX / CHECK:
+  아래 테스트 생성 오류를 수정. 이 샘플은 학습에 채택하지 않음
+  *수동 테스트: PCA 미검사 / RL 학습 미실행*
+  Full raw JSONL: /root/synth_gen/custome/rl/output/20261122_140924/tracks/ours/generated_code.jsonl
+
+
+================ SAMPLE 2/4 ================
+[1] SEED: Fibonacci with a twist.
+[2] QUESTION / PROBLEM:
+**Problem Statement:**
+
+Given two positive integers \( m \) and \( n \), where \( m > n \), define a sequence \( F_k(m, n) \) recursively as follows:
+- \( F_0(m, n) = m - n \)
+- For \( k \geq 1 \),
+  - If \( k \) is even,
+    - \( F_{2k}(m, n) = 2F_{2k-1}(m, n) + 3F_{2k-2}(m, n) \)
+  - If \( k \) is odd,
+    - \( F_{2k+1}(m, n) = 4F_{2k}(m, n) + 5F_{2k-1}(m, n) \)
+
+Your task is to compute the value of \( F_m(m, n) \). 
+
+**Function Name:**  
+`fib_with_twist`
+
+**Purpose:**  
+To find the result of applying the Fibonacci sequence rules iteratively on the given values \( m \) and \( n \).
+
+**Inputs:**
+- An integer \( m \) representing the starting point of the sequence.
+- Another integer \( n \) representing the ending point of the sequence, with \( m > n \).
+
+**Outputs:**
+- A single integer representing the computed value of \( F_m(m, n) \).
+
+**Indexing Convention:**
+- The sequence starts at \( F_0(m, n) \) and ends at \( F_m(m, n) \).
+- The indices are zero-based, meaning \( F_0(m, n) = 0 \).
+
+**Initial Conditions:**
+- \( F_0(m, n) = m - n \)
+
+**Edge Cases:**
+- If \( m < 0 \) or \( n < 0 \), return `None`.
+- Ensure that \( m \leq F_{2n}(m, n) \) before computing any terms beyond \( F_n(m, n) \).
+
+---
+
+This problem requires understanding recursive sequences and their properties while handling edge cases appropriately.
+[3] MODEL PREDICTION / CODE:
+python --version
+pip show pytest
+[4] GENERATED PYTEST:
+@pytest.mark.parametrize("inputs, expected", [
+    ((7, 3), 8),
+    ((12, 5), 13),
+    ((100, 25), 133),
+])
+def test_fib_with_twist(test_data):
+    for inputs, expected in test_data:
+        assert fib_with_twist(*inputs) == expected
+[5] VERDICTS:
+  synth_gen: FAIL | failed_verifier=PythonTestBasedVerifier
+  Podman pytest: SKIPPED | status=invalid_code | invalid input before execution
+  FINAL: 검증 실패 — 모델 예측 코드의 Python 문법 오류
+[6] FAILURE REASON / EVIDENCE:
+  synth_gen: InvalidGeneratedTest: Test uses pytest without 'import pytest'
+  pytest: Prediction syntax error: invalid syntax (<unknown>, line 2)
+[7] WHAT TO FIX / CHECK:
+  모델 예측 코드의 SyntaxError를 수정. 문제 및 테스트 품질과 별개로 코드가 실행 불가
+  WARNING: 테스트가 pytest를 사용하지만 import pytest가 없음
+  *수동 테스트: PCA 미검사 / RL 학습 미실행*
+  Full raw JSONL: /root/synth_gen/custome/rl/output/20261122_140924/tracks/ours/generated_code.jsonl
+
+
+================ SAMPLE 3/4 ================
+[1] SEED: Fibonacci with a twist.
+[2] QUESTION / PROBLEM:
+# Fibonacci Sequence Twist
+
+## Function Name:
+`twisted_fibonacci(n: int) -> int`
+
+## Purpose:
+The `twisted_fibonacci` function computes the n-th term of a modified Fibonacci sequence where each term is the sum of the two preceding terms, but with a specific twist:
+
+- The first two terms of the sequence are defined as f(0) = 0 and f(1) = 1.
+- For any other term f(n), if n is even, it equals twice the previous term plus three times the term before that.
+- If n is odd, it equals three times the previous term plus twice the term before that.
+
+## Inputs:
+- An integer `n`, representing the position in the sequence (0-based index).
+
+## Outputs:
+- Returns the value of the n-th term in the modified Fibonacci sequence.
+
+## Edge Cases:
+- For `n < 0`, return -1 to indicate invalid input.
+- When `n == 0`, return 0.
+- When `n == 1`, return 1.
+
+## Indexing Convention:
+Use 0-based indexing.
+
+## Initial Conditions:
+- Set `f(0) = 0` and `f(1) = 1`.
+
+## Mathematical Definition:
+For any `n ≥ 2`:
+- `f(n)` can be calculated using the formula:
+  ```
+  f(n) = {
+    3 * f(n-1) + 2 * f(n-2), if n is odd,
+    2 * f(n-1) + 3 * f(n-2), if n is even
+  }
+  ```
+
+This problem requires understanding recursive relationships and applying them to generate terms in a custom Fibonacci-like sequence.
+[3] MODEL PREDICTION / CODE:
+def twisted_fibonacci(n: int) -> int:
+    """
+    Calculate the nth term of a modified Fibonacci sequence.
+    
+    Args:
+        n (int): Position in the sequence (0-indexed).
+        
+    Returns:
+        int: The value of the n-th term in the modified Fibonacci sequence.
+        
+    Edge cases:
+        - Return -1 for n < 0.
+        - Return 0 for n == 0.
+        - Return 1 for n == 1.
+        
+    Initial conditions:
+        f(0) = 0, f(1) = 1
+        
+    Formula:
+        f(n) = {
+            3*f(n-1) + 2*f(n-2), if n is odd,
+            2*f(n-1) + 3*f(n-2), if n is even
+        }
+    """
+    
+    # Base case checks
+    if n < 0:
+        return -1
+    
+    elif n == 0:
+        return 0
+    
+    elif n == 1:
+        return 1
+    
+    else:
+        # Initialize the first two terms
+        prev_two_terms = [0, 1]
+        
+        # Loop from 2 to n
+        for i in range(2, n+1):
+            # Calculate the next term based on the parity of n
+            if i % 2 == 0:
+                next_term = 3*prev_two_terms[0] + 2*prev_two_terms[1]
+                
+            else:
+                next_term = 2*prev_two_terms[0] + 3*prev_two_terms[1]
+            
+            # Update the last two terms
+            prev_two_terms[0], prev_two_terms[1] = prev_two_terms[1], next_term
+            
+            # Print intermediate values to debug
+            print(f"At step {i}, fib_{n} = {next_term}")
+            
+            # Return the current term
+            return next_term
+
+# Test the function
+print(twisted_fibonacci(5))  # Output: 7
+print(twisted_fibonacci(8))  # Output: 29
+print(twisted_fibonacci(-1)) # Output: -1
+print(twisted_fibonacci(0))  # Output: 0
+print(twisted_fibonacci(1))  # Output: 1
+[4] GENERATED PYTEST:
+(테스트 없음)
+[5] VERDICTS:
+  synth_gen: FAIL | failed_verifier=MypyVerifier
+  Podman pytest: SKIPPED | status=no_tests | invalid input before execution
+  FINAL: 정답 여부 미판정 — 테스트 코드 없음
+[6] FAILURE REASON / EVIDENCE:
+  synth_gen: solution.py:1: error: Missing return statement  [return]
+Found 1 error in 1 file (checked 1 source file)
+  pytest: No executable generated tests
+[7] WHAT TO FIX / CHECK:
+  테스트 생성 단계를 확인하고, 테스트가 만들어지기 전에는 학습에 사용하지 말 것
+  WARNING: 문제(question)에 구현 코드 또는 import가 포함됨: 정답 누출 가능성 확인
+  *수동 테스트: PCA 미검사 / RL 학습 미실행*
+  Full raw JSONL: /root/synth_gen/custome/rl/output/20261122_140924/tracks/ours/generated_code.jsonl
+
+
+================ SAMPLE 4/4 ================
+[1] SEED: Fibonacci with a twist.
+[2] QUESTION / PROBLEM:
+**Problem:**
+
+Write a Python function `fib_with_twist(n)` that calculates the nth Fibonacci number with a twist. The twist is that you need to return the result modulo \(2^{31} - 1\). This ensures that your program can handle very large values of n without overflow issues.
+
+### Function Signature:
+```python
+def fib_with_twist(n: int) -> int:
+    """
+    Calculate the nth Fibonacci number with a twist, returning the result modulo 2^31-1.
+
+    Parameters:
+    n (int): The position in the Fibonacci sequence.
+
+    Returns:
+    int: The nth Fibonacci number modulo 2^31-1.
+    """
+```
+
+### Constraints:
+- \(n \geq 0\)
+- The function should work efficiently even for large values of n.
+
+### Edge Cases:
+- If \(n = 0\), return 0.
+- If \(n = 1\), return 1.
+- For any positive integer \(n\), ensure the result is within the range [0, \(2^{31} - 1\)).
+
+### Example:
+```python
+print(fib_with_twist(5))  # Output: 5
+# Explanation: F(5) % 2^31-1 = 5 % 2147483647 = 5
+
+print(fib_with_twist(9))  # Output: 55
+# Explanation: F(9) % 2^31-1 = 55 % 2147483647 = 55
+```
+[3] MODEL PREDICTION / CODE:
+(코드 없음)
+[4] GENERATED PYTEST:
+(테스트 없음)
+[5] VERDICTS:
+  synth_gen: FAIL | failed_verifier=GenerationException
+  Podman pytest: SKIPPED | status=prompt_leak | invalid input before execution
+  FINAL: 검증 실패 — 문제에 정답 코드/풀이가 포함됨 — 학습에서 제외
+[6] FAILURE REASON / EVIDENCE:
+  synth_gen: ValueError: Generated problem rejected after 4 attempts: Python code fence embedded in generated question
+  pytest: Python code fence embedded in generated question
+[7] WHAT TO FIX / CHECK:
+  문제 생성 프롬프트 또는 재생성 횟수를 수정. 해당 질문을 학습에 사용하지 말 것
+  WARNING: 문제(question)에 구현 코드 또는 import가 포함됨: 정답 누출 가능성 확인
+  *수동 테스트: PCA 미검사 / RL 학습 미실행*
+  Full raw JSONL: /root/synth_gen/custome/rl/output/20261122_140924/tracks/ours/generated_code.jsonl
+

@@ -1,0 +1,461 @@
+
+================ SAMPLE 1/4 ================
+[1] SEED: Fibonacci with a twist.
+[2] QUESTION / PROBLEM:
+python
+def check_fib_memoized():
+    # Define test cases
+    test_cases = [(3, 2), (4, 3), (5, 5)]
+    
+    # Iterate through test cases
+    for n, expected in test_cases:
+        result = fib_memoized(n)
+        assert result == expected, f"Test failed for input {n}. Expected {expected}, got {result}"
+        
+    print("All tests passed!")
+
+# Import necessary packages here if any required
+import functools
+
+# Begin code
+@functools.lru_cache(maxsize=None)  # Use lru_cache from functools module to enable memoization
+def fib_memoized(n):
+    """
+    Recursive Fibonacci function with memoization.
+    """
+    if n < 0:
+        raise ValueError("Input must be non-negative.")
+    elif n == 0:
+        return 0
+    elif n == 1:
+        return 1
+    else:
+        return fib_memoized(n-1) + fib_memoized(n-2)
+
+# Call the check function to verify correctness
+check_fib_memoized()
+[3] MODEL PREDICTION / CODE:
+from functools import lru_cache
+
+# Define test cases
+test_cases = [(3, 2), (4, 3), (5, 5)]
+
+# Iterate through test cases
+for n, expected in test_cases:
+    result = fib_memoized(n)
+    assert result == expected, f"Test failed for input {n}. Expected {expected}, got {result}"
+    
+print("All tests passed!")
+[4] GENERATED PYTEST:
+import pytest
+
+def check_fib_memoized():
+    # Define test cases
+    test_cases = [
+        {"input": [-1], "expected": None},
+        {"input": [0], "expected": 0},
+        {"input": [1], "expected": 1},
+        {"input": [2], "expected": 1},
+        {"input": [3], "expected": 2},
+        {"input": [4], "expected": 3},
+        {"input": [5], "expected": 5},
+        {"input": [6], "expected": 8},
+        {"input": [7], "expected": 13},
+        {"input": [8], "expected": 21},
+        {"input": [9], "expected": 34},
+        {"input": [10], "expected": 55},
+        {"input": [11], "expected": 89},
+        {"input": [12], "expected": 144},
+        {"input": [13], "expected": 233},
+        {"input": [14], "expected": 377},
+        {"input": [15], "expected": 610},
+        {"input": [16], "expected": 987},
+        {"input": [17], "expected": 1597},
+        {"input": [18], "expected": 2584},
+        {"input": [19], "expected": 4181},
+        {"input": [20], "expected": 6765}
+    ]
+    
+    # Iterate through test cases
+    for i, tc in enumerate(test_cases):
+        output = fib_memoized(tc["input"])
+        assert output == tc["expected"], f"Test case {i+1} failed: Expected {tc['expected']}, got {output}"
+        
+    print("All tests passed!")
+
+# Import necessary packages here if any required
+import functools
+from typing import List
+
+# BEGIN CODE
+@functools.lru_cache(maxsize=None)  # Use lru_cache from functools module to enable memoization
+def fib_memoized(n: int) -> int:
+    """
+    Recursive Fibonacci function with memoization.
+    :param n: Non-negative integer
+    :return: nth Fibonacci number
+    """
+    if n < 0:
+        raise ValueError("Input must be non-negative.")
+    elif n <= 1:
+        return n
+    else:
+        return fib_memoized(n - 1) + fib_memoized(n - 2)
+# END CODE
+
+# Call the check function to verify correctness
+check_fib_memoized()
+[5] VERDICTS:
+  synth_gen: FAIL | failed_verifier=PythonTestBasedVerifier
+  Podman pytest: FAIL | collected=0 passed=0 failed=0 errors=0 exit_code=2
+  FINAL: 정답 여부 미판정 — pytest 수집/임포트 실패 (테스트 미실행)
+[6] FAILURE REASON / EVIDENCE:
+  synth_gen: No tests were run.
+  pytest: E   NameError: name 'fib_memoized' is not defined
+[7] WHAT TO FIX / CHECK:
+  아래 오류와 생성된 테스트의 import·데코레이터를 먼저 수정. 코드 정오 판정 불가
+  WARNING: 문제(question)에 구현 코드 또는 import가 포함됨: 정답 누출 가능성 확인
+  *수동 테스트: PCA 미검사 / RL 학습 미실행*
+  Full raw JSONL: /root/synth_gen/custome/rl/output/20261122_140924/tracks/ours/generated_code.jsonl
+
+
+================ SAMPLE 2/4 ================
+[1] SEED: Fibonacci with a twist.
+[2] QUESTION / PROBLEM:
+python
+def find_even_fibonacci_index(n):
+    """
+    Given a positive integer n, this function returns the index of the first even Fibonacci number
+    that is greater than or equal to n.
+
+    :param n: A positive integer representing the threshold for finding an even Fibonacci number.
+    :return: The index of the first even Fibonacci number >= n.
+    """
+
+    def fib_sequence():
+        """Generates Fibonacci sequence numbers."""
+        a, b = 0, 1
+        while True:
+            yield a
+            a, b = b, a + b
+
+    # Initialize variables
+    count = 0
+    current_number = 0
+
+    # Iterate through the Fibonacci sequence until we find an even number >= n
+    for num in fib_sequence():
+        if num % 2 == 0 and num >= n:
+            return count
+        count += 1
+[3] MODEL PREDICTION / CODE:
+def find_even_fibonacci_index(n):
+    """
+    Given a positive integer n, this function returns the index of the first even Fibonacci number
+    that is greater than or equal to n.
+
+    :param n: A positive integer representing the threshold for finding an even Fibonacci number.
+    :return: The index of the first even Fibonacci number >= n.
+    """
+
+    def fib_sequence():
+        """Generates Fibonacci sequence numbers."""
+        a, b = 0, 1
+        while True:
+            yield a
+            a, b = b, a + b
+
+    # Initialize variables
+    count = 0
+    current_number = 0
+
+    # Iterate through the Fibonacci sequence until we find an even number >= n
+    for num in fib_sequence():
+        if num % 2 == 0 and num >= n:
+            return count
+        count += 1
+
+
+# Test the function with a specific value of n
+find_even_fibonacci_index(10)
+[4] GENERATED PYTEST:
+def fib_sequence():
+    """Generates Fibonacci sequence numbers."""
+    a, b = 0, 1
+    while True:
+        yield a
+        a, b = b, a + b
+
+
+@pytest.mark.parametrize(
+    "n, expected", [
+        (5, 8),  # First even Fibonacci number >= 5 is at index 8
+        (34, 16),  # First even Fibonacci number >= 34 is at index 16
+    ]
+)
+def test_find_even_fibonacci_index(n, expected):
+    result = find_even_fibonacci_index(n)
+    assert result == expected, f"Expected {expected}, but got {result}."
+
+# Add more test cases to further validate the functionality
+def additional_test_cases():
+    test_cases = [(10, 5), (15, 9), (20, 14)]
+    for n, expected in test_cases:
+        result = find_even_fibonacci_index(n)
+        assert result == expected, f"Expected {expected}, but got {result}."
+
+additional_test_cases()
+[5] VERDICTS:
+  synth_gen: FAIL | failed_verifier=MypyVerifier
+  Podman pytest: FAIL | collected=0 passed=0 failed=0 errors=0 exit_code=2
+  FINAL: 정답 여부 미판정 — pytest 수집/임포트 실패 (테스트 미실행)
+[6] FAILURE REASON / EVIDENCE:
+  synth_gen: solution.py:1: error: Name "fib_sequence" is not defined  [name-defined]
+solution.py:2: error: Name "n" is not defined  [name-defined]
+solution.py:3: error: "return" outside function  [misc]
+solution.py:3: error: Name "count" is not defined  [name-defined]
+solution.py:5: error: Name "count" is not defined  [name-defined]
+Found 5 errors in 1 file (checked 1 source file)
+  pytest: E   NameError: name 'pytest' is not defined
+[7] WHAT TO FIX / CHECK:
+  아래 오류와 생성된 테스트의 import·데코레이터를 먼저 수정. 코드 정오 판정 불가
+  WARNING: 문제(question)에 구현 코드 또는 import가 포함됨: 정답 누출 가능성 확인
+  WARNING: 테스트가 pytest를 사용하지만 import pytest가 없음
+  *수동 테스트: PCA 미검사 / RL 학습 미실행*
+  Full raw JSONL: /root/synth_gen/custome/rl/output/20261122_140924/tracks/ours/generated_code.jsonl
+
+
+================ SAMPLE 3/4 ================
+[1] SEED: Fibonacci with a twist.
+[2] QUESTION / PROBLEM:
+python
+def find_even_fibonacci(n):
+    """
+    This function takes an integer n as input and returns the nth even Fibonacci number.
+
+    Args:
+    - n: An integer representing the position of the desired even Fibonacci number.
+
+    Returns:
+    - The nth even Fibonacci number if it exists, otherwise None.
+    """
+
+    # Initialize variables for storing the first two even Fibonacci numbers
+    fib1 = 2
+    fib2 = 8
+
+    count = 0
+
+    while True:
+        # Generate next even Fibonacci number
+        next_fib = (fib1 + fib2) * 2
+
+        # Check if we have found the nth even Fibonacci number
+        if count == n:
+            return next_fib
+        
+        # Update the values to move to the next pair of Fibonacci numbers
+        fib1, fib2 = fib2, next_fib
+        count += 1
+
+# Example usage
+print(find_even_fibonacci(5))  # Output should be 34
+[3] MODEL PREDICTION / CODE:
+def find_even_fibonacci(n):
+    """
+    This function takes an integer n as input and returns the nth even Fibonacci number.
+
+    Args:
+    - n: An integer representing the position of the desired even Fibonacci number.
+
+    Returns:
+    - The nth even Fibonacci number if it exists, otherwise None.
+    """
+
+    # Initialize variables for storing the first two even Fibonacci numbers
+    fib1 = 2
+    fib2 = 8
+
+    count = 0
+
+    while True:
+        # Generate next even Fibonacci number
+        next_fib = (fib1 + fib2) * 2
+
+        # Check if we have found the nth even Fibonacci number
+        if count >= n:
+            return next_fib
+
+        # Update the values to move to the next pair of Fibonacci numbers
+        fib1, fib2 = fib2, next_fib
+        count += 1
+
+# Example usage
+results = []
+for i in range(1, 6):  # Specify unique values for n
+    results.append(find_even_fibonacci(i))
+    
+# Print the results
+for result in results:
+    if result is not None:
+        print(f"The {i}th even Fibonacci number is: {result}")
+    else:
+        print(f"No valid even Fibonacci number found for n={i}")
+[4] GENERATED PYTEST:
+import unittest
+
+class TestEvenFibonacciFunction(unittest.TestCase):
+
+    def test_find_even_fibonacci(self):
+        self.assertIsNone(find_even_fibonacci(-1))
+        self.assertIsNone(find_even_fibonacci(0))
+        self.assertEqual(find_even_fibonacci(1), 2)
+        self.assertEqual(find_even_fibonacci(2), 8)
+        self.assertEqual(find_even_fibonacci(3), 34)
+        self.assertEqual(find_even_fibonacci(4), 144)
+        self.assertEqual(find_even_fibonacci(5), 374)
+        self.assertEqual(find_even_fibonacci(6), 986)
+        self.assertEqual(find_even_fibonacci(7), 2584)
+        self.assertEqual(find_even_fibonacci(8), 66168)
+        self.assertEqual(find_even_fibonacci(9), 17711)
+        self.assertEqual(find_even_fibonacci(10), 46368)
+        self.assertEqual(find_even_fibonacci(11), None)  # No even Fibonacci number between 46368 and 46368*2+1
+        self.assertEqual(find_even_fibonacci(12), None)  # No even Fibonacci number after 46368*2+1
+        self.assertEqual(find_even_fibonacci(13), None)  # Further beyond the known sequence
+
+if __name__ == '__main__':
+    unittest.main()
+[5] VERDICTS:
+  synth_gen: FAIL | failed_verifier=PythonTestBasedVerifier
+  Podman pytest: FAIL | collected=1 passed=0 failed=1 errors=0 exit_code=1
+  FINAL: 검증 실패 — pytest 테스트 실행 후 실패
+[6] FAILURE REASON / EVIDENCE:
+  synth_gen: self = <user_source_code.TestEvenFibonacciFunction testMethod=test_find_even_fibonacci>
+
+    def test_find_even_fibonacci(self):
+>       self.assertEqual(find_even_fibonacci(1), 2)
+E       AssertionError: 20 != 2
+
+user_source_code.py:53: AssertionError
+  pytest: E       AssertionError: 20 is not None
+  pytest: user_source_code.py:7: AssertionError
+[7] WHAT TO FIX / CHECK:
+  생성 코드와 테스트의 기대값이 문제 설명과 일치하는지 비교
+  WARNING: 문제(question)에 구현 코드 또는 import가 포함됨: 정답 누출 가능성 확인
+  *수동 테스트: PCA 미검사 / RL 학습 미실행*
+  Full raw JSONL: /root/synth_gen/custome/rl/output/20261122_140924/tracks/ours/generated_code.jsonl
+
+
+================ SAMPLE 4/4 ================
+[1] SEED: Fibonacci with a twist.
+[2] QUESTION / PROBLEM:
+python
+def calculate_fibonacci(n):
+    """
+    This function calculates the nth Fibonacci number with a unique twist.
+    Instead of using recursion or iterative methods, this function uses an arithmetic progression to compute the result.
+    
+    Args:
+        n (int): The position in the Fibonacci sequence to compute.
+
+    Returns:
+        int: The nth Fibonacci number calculated based on the arithmetic progression method.
+        
+    Example usage:
+    >>> calculate_fibonacci(10)
+    55
+    >>> calculate_fibonacci(20)
+    6765
+    >>> calculate_fibonacci(30)
+    832040
+    """
+
+    # Since we're using arithmetic progression for calculation,
+    # we need to adjust the formula slightly compared to the standard Fibonacci formula.
+    # The adjusted formula is: fib(n) = fib(n-1) + 2 * fib(n-2), starting from fib(0) = 0 and fib(1) = 1.
+    
+    if n == 0:
+        return 0
+    elif n == 1:
+        return 1
+    
+    # Adjusted Fibonacci values based on the new arithmetic progression rule.
+    fib_n_minus_1 = 0
+    fib_n_minus_2 = 1
+    
+    for _ in range(2, n+1):
+        current_fib = fib_n_minus_1 + 2 * fib_n_minus_2
+        fib_n_minus_1, fib_n_minus_2 = fib_n_minus_2, current_fib
+
+    return current_fib
+
+
+# Check function to verify the correctness of the generated function.
+def check_function():
+    assert calculate_fibonacci(10) == 55, "Test case 1 failed"
+    assert calculate_fibonacci(20) == 6765, "Test case 2 failed"
+    assert calculate_fibonacci(30) == 832040, "Test case 3 failed"
+    print("All test cases passed!")
+
+
+check_function()
+[3] MODEL PREDICTION / CODE:
+def calculate_fibonacci(n):
+    """
+    This function calculates the nth Fibonacci number with a unique twist.
+    Instead of using recursion or iterative methods, this function uses an arithmetic progression to compute the result.
+    
+    Args:
+        n (int): The position in the Fibonacci sequence to compute.
+
+    Returns:
+        int: The nth Fibonacci number calculated based on the arithmetic progression method.
+        
+    Example usage:
+    >>> calculate_fibonacci(10)
+    55
+    >>> calculate_fibonacci(20)
+    6765
+    >>> calculate_fibonacci(30)
+    832040
+    """
+
+    # Since we're using arithmetic progression for calculation,
+    # we need to adjust the formula slightly compared to the standard Fibonacci formula.
+    # The adjusted formula is: fib(n) = fib(n-1) + 2 * fib(n-2), starting from fib(0) = 0 and fib(1) = 1.
+    
+    if n == 0:
+        return 0
+    elif n == 1:
+        return 1
+    
+    # Adjusted Fibonacci values based on the new arithmetic progression rule.
+    fib_n_minus_1 = 0
+    fib_n_minus_2 = 1
+    
+    for _ in range(2, n+1):
+        current_fib = fib_n_minus_1 + 2 * fib_n_minus_2
+        fib_n_minus_1, fib_n_minus_2 = fib_n_minus_2, current_fib
+
+    return current_fib
+[4] GENERATED PYTEST:
+def test_calculate_fibonacci_with_unexpected_inputs(input_val):
+    with pytest.raises(ValueError):
+        calculate_fibonacci(*input_val)
+
+test_calculate_fibonacci_with_unexpected_inputs.assert_raises(ValueError, lambda: calculate_fibonacci(1))  # Should pass correctly
+test_calculate_fibonacci_with_unexpected_inputs.assert_raises(ValueError, lambda: calculate_fibonacci(2))  # Should fail due to incorrect argument count
+[5] VERDICTS:
+  synth_gen: FAIL | failed_verifier=PythonTestBasedVerifier
+  Podman pytest: FAIL | collected=0 passed=0 failed=0 errors=0 exit_code=2
+  FINAL: 정답 여부 미판정 — pytest 수집/임포트 실패 (테스트 미실행)
+[6] FAILURE REASON / EVIDENCE:
+  synth_gen: No tests were run.
+  pytest: E   AttributeError: 'function' object has no attribute 'assert_raises'
+[7] WHAT TO FIX / CHECK:
+  아래 오류와 생성된 테스트의 import·데코레이터를 먼저 수정. 코드 정오 판정 불가
+  WARNING: 문제(question)에 구현 코드 또는 import가 포함됨: 정답 누출 가능성 확인
+  WARNING: 테스트가 pytest를 사용하지만 import pytest가 없음
+  *수동 테스트: PCA 미검사 / RL 학습 미실행*
+  Full raw JSONL: /root/synth_gen/custome/rl/output/20261122_140924/tracks/ours/generated_code.jsonl
+

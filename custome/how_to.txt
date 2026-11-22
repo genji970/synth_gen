@@ -1,114 +1,20 @@
-synth_gen / custome/rl HOW TO
-============================
+# create venv
 
-1. RunPod: edit configuration
------------------------------
-cd /root/synth_gen
-source .venv/bin/activate
-nano custome/rl/rl_config.sh
+### synth test ###
+cd ~/synth_gen
 
-# Inside rl_config.sh, replace the HF_TOKEN placeholder with your real HF WRITE token.
-# Example (DO NOT literally use hf_your_private_write_token):
-# export HF_TOKEN="hf_your_private_write_token"
-# export RL_HF_TOKEN="$HF_TOKEN"
-# RL_UPLOAD_EVERY=25 means private HF upload every 25 NEW records.
-# Adjust RL_GPUS_PER_NODE, RL_NNODES, CUDA_VISIBLE_DEVICES, RL_MODEL,
-# RL_CODE_SEEDS, RL_WEIGHT_D1/D2/D3/EXEC/ERR in rl_config.sh.
-chmod 600 custome/rl/rl_config.sh
-
-# IMPORTANT: do not commit rl_config.sh to Git because it contains a token.
-# If this file is not tracked yet, ignore it from the repo root:
-grep -qxF '/custome/rl/rl_config.sh' .gitignore 2>/dev/null || echo '/custome/rl/rl_config.sh' >> .gitignore
-# Check whether it was already tracked (if yes, remove it from the Git index first):
-git ls-files custome/rl/rl_config.sh
-
-2. Local laptop: start Podman server and SSH reverse tunnel
-------------------------------------------------------------
-# WINDOWS PowerShell:
-wsl -d Ubuntu
-
-# In LOCAL WSL terminal 1, use your local synth_gen path:
-cd /mnt/c/Users/home/Desktop/synth_gen
-source .venv/bin/activate
-export SYNTHGEN_REMOTE_TOKEN="$(cat ~/.synthgen_remote_token)"
-python -m custome.podman_server
-# Keep WSL terminal 1 running.
-
-# In LOCAL WSL terminal 2, edit SSH address and port to CURRENT RunPod values:
-ssh -i ~/.ssh/id_ed25519 -p 12574 -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -R 127.0.0.1:18765:127.0.0.1:18765 root@213.173.108.14
-# Keep WSL terminal 2 running.
-
-3. RunPod: environment, token, dependencies
-------------------------------------------
-cd /root/synth_gen
-source .venv/bin/activate
+# 최상위 설정 불러오기
 source custome/config.sh
 source custome/rl/rl_config.sh
-export SYNTHGEN_USE_REMOTE_PODMAN=1
-# Load the Podman server token after config.sh; must match WSL server:
-if [ -f /root/.synthgen_remote_token ]; then export SYNTHGEN_REMOTE_TOKEN="$(cat /root/.synthgen_remote_token)"; fi
 
-# Check remote code execution:
-curl -sS --max-time 120 -H "Authorization: Bearer $SYNTHGEN_REMOTE_TOKEN" -H 'Content-Type: application/json' --data '{"method":"execute_python","code":"print(1+2)","timeout":60}' http://127.0.0.1:18765/execute
+# 현재 모델 및 설정 확인
+echo "$RL_BASE_MODEL"
+echo "$RL_SYNTH_PROCESSES"
+echo "$RL_SYNTH_BATCH_SIZE"
 
-# VERL/vLLM must be installed in a CUDA-compatible environment first:
-# https://verl.readthedocs.io/en/latest/start/install.html
-python -m pip install datasets huggingface_hub scikit-learn matplotlib ddgs
-python -c 'import verl, vllm, datasets, huggingface_hub, sklearn, matplotlib; print("imports OK")'
+# 코드 2개 생성 + synth_gen 검증 + Podman pytest + 데이터 매핑
+python -m custome.sample_test \
+    --seed "Fibonacci with a twist." \
+    --samples 2 \
+    2>&1 | tee sample_test.log
 
-# Verify HF token without printing the secret:
-python - <<'PY_HF'
-import os
-from huggingface_hub import HfApi
-assert os.environ['HF_TOKEN'] != 'hf_REPLACE_WITH_YOUR_WRITE_TOKEN'
-print('HF user:', HfApi(token=os.environ['HF_TOKEN']).whoami()['name'])
-PY_HF
-
-4. Create synthetic code dataset + private Hugging Face upload
---------------------------------------------------------------
-# In RunPod with the environment sourced as in step 3:
-python -m custome.rl.generate
-# Saves one JSON object per sample to:
-#   custome/rl/output/generated_code.jsonl
-# Fields include seed, backbone, problem, raw output, code, test_code,
-# verification passed/status, error_message, error_types, pytest summary,
-# coverage, and (for GRPO) reward components/total.
-# When RL_UPLOAD_EVERY new records accumulate, uploads only to a private HF dataset.
-# Force upload any remaining records (< threshold):
-python -m custome.rl.hub
-# Inspect auto-generated private dataset repo name:
-cat custome/rl/output/hub_state.json
-
-5. Full continual training sequence (single-node pipeline)
----------------------------------------------------------
-# math SFT -> social SFT -> code SFT -> code GRPO.
-# Evaluates all three tasks after each stage; merges FSDP checkpoints.
-# Requires active WSL Podman server / SSH tunnel and prepared VERL environment.
-# Note: pipeline.sh currently supports single-node orchestration only.
-bash custome/rl/pipeline.sh
-
-6. Manual commands (RunPod)
-----------------------------
-# Only use after dataset preparation and source rl_config.sh:
-python -m custome.rl.data
-python -m custome.rl.eval --model "$RL_MODEL" --stage base
-bash custome/rl/train.sh sft math "$RL_MODEL"
-# The next steps require merging the preceding SFT checkpoint first;
-# use pipeline.sh for automated merging instead of these manual commands.
-
-7. Outputs
-----------
-# custome/rl/output/generated_code.jsonl  - generated code + verification + reward
-# custome/rl/output/hub_state.json       - private HF repo ID / upload cursor
-# custome/rl/output/history.jsonl       - CL evaluation history
-# custome/rl/output/visualizations/     - point-only 1D, 2D, 3D PCA + rewards
-# custome/rl/checkpoints/              - FSDP checkpoints and merged HF models
-
-8. Security / limitations
-------------------------
-# Saving export HF_TOKEN in rl_config.sh works without `hf auth login`.
-# Always use a WRITE-scoped HF token, and never put it in a public repo.
-# Hub checks private=True when creating and when re-using dataset repos.
-# New data remains local when an upload fails; run python -m custome.rl.hub to retry.
-# Existing code still needs runtime testing on RunPod.
-# Multi-node requires external Ray coordination and per-node torchrun configuration.

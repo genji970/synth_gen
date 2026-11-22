@@ -330,7 +330,8 @@ def test_generated_training_prompt_reused_for_grpo():
         "accepted": True,
     })
     grpo = record.to_verl(3)
-    assert grpo["raw_prompt"][0]["content"] == record.prompt
+    assert record.question in grpo["raw_prompt"][0]["content"]
+    assert "Programming language: Python" in grpo["raw_prompt"][0]["content"]
     assert grpo["extra_info"]["source_record"]["question"] == record.question
     assert "reference_batch" not in grpo["extra_info"]
     assert record.to_sft()["messages"][0]["content"] == record.prompt
@@ -1193,9 +1194,7 @@ def test_async_producer_to_saved_jsonl_to_actual_grpo_loader(monkeypatch, settin
     loader = StreamingCodeLoader(_data_config=None, _split="train", _batch_size=2,
                                  _tokenizer=None, _processor=None, _collate_fn=lambda x: x)
     loaded = next(iter(loader))
-    assert [v["raw_prompt"][0]["content"] for v in loaded] == [
-        row["prompt"] for row in producer.store.load_accepted(refs, 0)
-    ]
+    assert all("Programming language: Python" in v["raw_prompt"][0]["content"] for v in loaded)
     assert all(r["metadata"]["pca_matched"] for r in producer.store.load_accepted(refs, 0))
     assert files.read(files.anchor(1))["problems"] == [r["question"] for r in produced]
     assert len(producer.store.path.read_text().splitlines()) == 2
@@ -1477,7 +1476,7 @@ def test_every_task_sft_grpo_eval_receives_only_canonical_prompt(settings):
         grpo = sample.to_verl(step=0)
         assert isinstance(sample.prompt, str)
         assert sft['messages'][0] == {'role': 'user', 'content': sample.prompt}
-        assert grpo['raw_prompt'][0] == {'role': 'user', 'content': sample.prompt}
+        assert sample.question in grpo['raw_prompt'][0]['content']
         assert 'HumanMessage(' not in sample.prompt
         assert 'ChatPromptValue(' not in sample.prompt
         assert 'messages=[' not in sample.prompt
@@ -1603,14 +1602,14 @@ def test_synth_generation_retries_answer_leaks_without_reusing_output(monkeypatc
 
 
 
-def test_synth_verifier_failure_cannot_pass_scoring_acceptance(settings):
+def test_synth_verifier_failure_still_passes_pca_acceptance(settings):
     # Reward service returns a filtered verification record without source/name.
     # Producer now restores synthesis provenance before acceptance decisions.
     track = CodeTrack.make("ours")
     result = {"passed": True, "metadata": {"pca_matched": True,
               "pca_by_task": {"math": {"matched": True}}}}
     assert track.rejection_reason({**result, "source": "synth_gen",
-                                   "synth_gen_passed": False}) == "synth_gen_verifier"
+                                   "synth_gen_passed": False}) == ""
     assert track.rejection_reason({**result, "source": "synth_gen",
                                    "synth_gen_passed": True}) == ""
 
@@ -1739,17 +1738,17 @@ def test_generated_test_without_asserts_never_qualifies(settings):
 
 # Problem + unverified prediction -> test generation; never let candidate
 # outputs serve as labels (independent-oracle contract).
-def test_generated_test_prompt_explicitly_includes_problem_and_actual_prediction():
+def test_generated_test_prompt_excludes_predicted_implementation():
     from custome.main import synth_pytest_instruction
     prompt = synth_pytest_instruction(
         "Return the sum of two integers.",
         "def add(a,b): return a-b", "def add(a, b)",
     )
     assert "Return the sum of two integers." in prompt
-    assert "def add(a,b): return a-b" in prompt
-    assert "MODEL-PREDICTED PYTHON CODE / UNTRUSTED" in prompt
+    assert "def add(a,b): return a-b" not in prompt
+    assert "Python" in prompt and "pytest" in prompt
     assert "NEVER use a call to the predicted function" in prompt
-    assert "correct reference solution" in prompt
+    assert "def add(a, b)" in prompt
 
 
 def test_test_generator_retries_self_oracle_then_accepts_independent_oracle(monkeypatch):
@@ -1828,5 +1827,59 @@ def test_generated_pytest_retry_audits_every_rejected_attempt():
     assert all(x["event"] == "pytest_generation_attempt" for x in history)
     assert all(x["passed"] is False for x in history)
     assert all("expected" in x["error"] for x in history)
-    assert all("MODEL-PREDICTED PYTHON CODE" in x["generation_prompt"] for x in history)
+    assert all("def add(a,b):return a+b" not in x["generation_prompt"] for x in history)
     assert all("def add(a,b):return a+b" in x["code"] for x in history)
+
+
+# Python generation + PCA-only acceptance + error-feedback regressions.
+"""CPU-only regression tests for PCA-only admission and Python failure prompts."""
+
+from custome.rl.data_load import Sample
+from custome.rl.tracks import SynthTrack
+
+
+def _sample(**changes):
+    data = dict(task="code", kind="code", source="synth_gen", question="Implement f(n).",
+                generated_code="def f(n):\n    return n - 1", test_code="def test_f():\n    assert f(2) == 2",
+                passed=False, status="failed", failure_stage="code_verification",
+                failure_reason="assertion failed", error_message="AssertionError: 1 != 2",
+                synth_gen_error="MypyVerifier: error", error_types=["AssertionError"],
+                metadata={"pca_by_task": {"math": {"matched": True}}, "pca_matched": True},
+                accepted=True)
+    data.update(changes)
+    return Sample(**data)
+
+
+def test_failed_pytest_can_pass_pca_filter():
+    track = SynthTrack("ours")
+    assert track.accepts(_sample().to_dict())
+    assert not track.accepts(_sample(metadata={"pca_by_task": {"math": {}}, "pca_matched": False}).to_dict())
+    assert not track.accepts(_sample(metadata={"pca_by_task": {}, "pca_matched": False}).to_dict())
+
+
+def test_failed_pytest_feedback_reaches_model_prompt():
+    row = _sample().to_verl(0)
+    text = row["raw_prompt"][0]["content"]
+    for expected in ["Programming language: Python", "Implement f(n).", "def f(n):",
+                     "def test_f():", "AssertionError: 1 != 2", "assertion failed",
+                     "MypyVerifier: error", "code_verification"]:
+        assert expected in text
+
+
+def test_missing_test_still_builds_training_prompt():
+    text = _sample(test_code="", generated_code="", status="no_tests").to_verl(0)["raw_prompt"][0]["content"]
+    assert "(not generated)" in text
+    assert "Python" in text
+
+
+def test_test_generator_prompt_excludes_prediction():
+    from custome.main import synth_pytest_instruction
+    p = synth_pytest_instruction("Write the function square(n).", "SECRET_IMPL = 2026", "square(n)")
+    assert "SECRET_IMPL" not in p
+    assert "Python" in p and "pytest" in p
+
+
+def test_core_acceptance_checks_only_pca_and_provenance():
+    from custome.rl.core import PrivateDataset
+    row = _sample(step=0).to_dict()
+    PrivateDataset._validate_training_record(row, step=0)

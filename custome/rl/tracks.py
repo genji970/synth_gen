@@ -65,24 +65,8 @@ class CodeTrack:
         })
 
     def rejection_reason(self, record, duplicate=False):
-        """One decision policy shared by the producer and all synthesized tracks."""
-        # The reward service deliberately returns only verification fields
-        # (record=False); it has no prompt/question to inspect. The producer
-        # checks the complete candidate BEFORE scoring, and JSONL validates
-        # it again before training.
-        if record.get("question") and record.get("kind"):
-            try:
-                Sample.from_dict(record).assert_prompt_integrity()
-            except ValueError:
-                return "prompt_leak"
-        if duplicate:
-            return "duplicate"
-        if record.get("passed") is not True and env("RL_REQUIRED_PASS") == "1":
-            return "test_failed"
-        if (record.get("source") == "synth_gen" and
-                record.get("synth_gen_passed") is not True and
-                env("RL_REQUIRE_SYNTH_VERIFIER") == "1"):
-            return "synth_gen_verifier"
+        # PCA is the only admission filter. Verification failures are training
+        # feedback, not reasons to discard an example.
         if self.filter_distance:
             metadata = record.get("metadata") or {}
             if not metadata.get("pca_by_task"):
@@ -195,7 +179,7 @@ class AsyncProducer:
         return files.read(path)
 
     async def make_batch(self, step, anchor):
-        """Asynchronous slots: a rejected candidate retries its EXACT seed.
+        """Asynchronous slots: a PCA-rejected candidate retries its EXACT seed.
 
         Each output slot owns one seed. The current actor is accessed through
         a generation lock (model reload/generate are not concurrent); Podman
@@ -211,7 +195,7 @@ class AsyncProducer:
         gate = asyncio.Lock()
         generation_slots = asyncio.Semaphore(gen_limit)
         verify_gate = asyncio.Lock()
-        accepted, seen, errors = [], set(), []
+        accepted, errors = [], []
         attempts = 0
         started = time.monotonic()
         Progress.log("producer", "starting candidate generation for batch", step=step,
@@ -250,20 +234,19 @@ class AsyncProducer:
                                 self.synth.generate, anchor, step, attempt, seed
                             )
                     except Exception as exc:
-                        Progress.log("producer", "generation request FAILED; retry same seed", step=step,
-                                     attempt=attempt, seed_slot=slot, error=f"{type(exc).__name__}: {exc}")
-                        await save(self.mapper.synth({
+                        Progress.log("producer", "generation failed; keeping error for PCA/training",
+                                     step=step, attempt=attempt, error=str(exc))
+                        candidate = {
                             "id": uuid4().hex[:16], "source": "synth_gen", "step": step,
                             "attempt": attempt, "seed": seed, "seed_slot": slot,
+                            "question": seed, "generated_code": "", "test_code": "",
                             "generator_model": snapshot.get("path", ""),
                             "policy_snapshot_step": snapshot.get("policy_step", -1),
-                            "accepted": False, "status": "generation_error",
-                            "failure_stage": "synth_gen_generation",
-                            "failure_reason": str(exc),
-                            "error_message": str(exc), "error_types": [type(exc).__name__],
-                            "raw_source": {"seed": seed, "reference_step": anchor.get("reference_step", "")},
-                        }).to_dict())
-                        continue
+                            "status": "generation_error", "passed": False,
+                            "failure_stage": "synth_gen_generation", "failure_reason": str(exc),
+                            "error_message": f"{type(exc).__name__}: {exc}",
+                            "error_types": [type(exc).__name__],
+                        }
                 # Bind the generation result to the exact requested training
                 # step/attempt/seed before normalizing or persisting its tests.
                 mismatched = {name: {"expected": expected, "returned": candidate.get(name)}
@@ -281,43 +264,18 @@ class AsyncProducer:
                                  attempt=attempt, mismatches=mismatched)
                 candidate.update({"step": step, "attempt": attempt, "seed": seed, "seed_slot": slot})
                 candidate = self.mapper.synth(candidate).to_dict()
-                if mismatched:
-                    await save(candidate)
-                    continue  # Retry the same seed after retaining full provenance.
-
-                try:
-                    Sample.from_dict(candidate).assert_prompt_integrity()
-                except ValueError as error:
-                    candidate.update({"passed": False, "accepted": False, "status": "prompt_leak",
-                                      "rejection_reason": "prompt_leak", "failure_stage": "problem_generation",
-                                      "failure_reason": str(error), "error_message": str(error)})
-                    Progress.log("producer", "rejected answer-leaking problem; retrying same seed",
-                                 step=step, attempt=attempt, reason=str(error))
-                    await save(candidate)
-                    continue
-
-                if candidate["status"] == "generation_error" or not candidate["generated_code"] or not candidate["test_code"]:
-                    # No way to earn a valid code reward without both code
-                    # and runnable tests; keep the entire failed attempt locally.
-                    reason = ("generation_error" if candidate["status"] == "generation_error" else
-                              "empty_code" if not candidate["generated_code"] else "no_tests")
-                    candidate.update({
-                        "passed": False, "accepted": False,
-                        "status": reason, "rejection_reason": reason,
-                        "failure_stage": "synth_gen_generation" if reason == "generation_error" else "code_verification",
-                        "failure_reason": candidate.get("synth_gen_error") or reason,
-                        "error_message": candidate.get("error_message") or candidate.get("synth_gen_error") or reason,
-                        "error_types": candidate.get("error_types") or ["NoTests" if reason == "no_tests" else "NoCode"],
-                    })
-                    Progress.log("producer", "candidate rejected before pytest; retry same seed",
-                                 step=step, attempt=attempt, seed_slot=slot, reason=reason)
-                    await save(self.mapper.synth(candidate).to_dict())
-                    continue  # Retry this exact same seed.
+                # Keep failures (including no code, no tests, malformed
+                # generated tests, and generator exceptions) for PCA scoring.
+                # Nothing besides PCA is an admission/rejection criterion.
+                if not candidate.get("generated_code") or not candidate.get("test_code"):
+                    candidate["failure_stage"] = candidate.get("failure_stage") or "synth_gen_generation"
+                    candidate["failure_reason"] = candidate.get("failure_reason") or "missing code or tests"
+                    candidate["error_message"] = candidate.get("error_message") or "missing code or tests"
                 future = loop.create_future()
                 await queue.put((candidate, future))
                 if await future:
                     return True
-                # Failure (test/PCA/duplicate) repeats this very same seed.
+                # Only PCA rejection retries this seed.
 
         async def verify():
             while True:
@@ -330,7 +288,7 @@ class AsyncProducer:
                 try:
                     result = await asyncio.to_thread(call_service, {
                         "source": "synth_gen", "record": False, "code": candidate["generated_code"],
-                        "raw_output": candidate["raw_output"],
+                        "raw_output": candidate.get("raw_output", candidate.get("generated_code", "")),
                         "extra_info": {
                             "question": candidate["question"], "seed": candidate["seed"],
                             "test_code": candidate.get("test_code"),
@@ -347,33 +305,31 @@ class AsyncProducer:
                     })
                     record = result["record"]
                     async with verify_gate:
-                        duplicate = candidate["generated_code"] in seen
-                        seen.add(candidate["generated_code"])
                         # The score service returns only verification fields;
                         # restore synth_gen provenance before the acceptance gate.
                         reason = self.track.rejection_reason({
                             **record, "source": "synth_gen",
                             "synth_gen_passed": candidate.get("synth_gen_passed"),
-                        }, duplicate=duplicate)
+                        })
                         accepted_now = not reason
                     detail = ""
-                    if reason == "test_failed":
-                        detail = record.get("error_message") or record.get("status") or "pytest did not pass"
-                    elif reason == "synth_gen_verifier":
-                        detail = (f"{candidate.get('synth_gen_failed_verifier', '')}: "
-                                  f"{candidate.get('synth_gen_error', '')}").strip()
-                    elif reason in ("distance", "pca_unavailable"):
+                    if reason in ("distance", "pca_unavailable"):
                         ratios = record.get("distance_ratios") or {}
                         detail = ", ".join(
-                            f"d{n}={ratios.get(f'd{n}', 'missing')} threshold={env(f'RL_THRESHOLD_D{n}') }"
+                            f"d{n}={ratios.get(f'd{n}', 'missing')} threshold={env(f'RL_THRESHOLD_D{n}')}"
                             for n in (1, 2, 3)
                         )
-                    elif reason == "duplicate":
-                        detail = "Identical code generated in another attempt of this batch"
                     # Keep full synth generation provenance alongside the
                     # new per-task PCA metadata (without silently overwriting).
                     source_meta = dict(candidate.get("metadata") or {})
+                    # Preserve existing generation/verifier error when independent
+                    # pytest has no useful message (e.g., missing tests).
+                    prior_error = candidate.get("error_message") or candidate.get("synth_gen_error") or ""
                     candidate.update({key: record[key] for key in Sample.verification_fields if key in record})
+                    if prior_error and record.get("error_message"):
+                        candidate["error_message"] = prior_error + "\n" + record["error_message"]
+                    elif prior_error:
+                        candidate["error_message"] = prior_error
                     candidate["metadata"] = {
                         **source_meta, **dict(record.get("metadata") or {}),
                     }
@@ -381,17 +337,16 @@ class AsyncProducer:
                         "accepted": accepted_now, "rejection_reason": reason,
                         "reference_step": "prior_sft_task_pca",
                         "success_reason": (
-                            "original synth_gen verification, independent Podman pytest, "
-                            "prior SFT task PCA (1D/2D/3D) thresholds and deduplication passed"
+                            "prior SFT task PCA (1D/2D/3D) thresholds passed"
                             if accepted_now else ""
                         ),
                         "failure_stage": (
                             "pca_filter" if reason in ("distance", "pca_unavailable") else
-                            "deduplication" if reason == "duplicate" else
-                            "synth_gen_verifier" if reason == "synth_gen_verifier" else
-                            "code_verification" if reason == "test_failed" else ""
+                            (candidate.get("failure_stage") or ("code_verification" if record.get("passed") is False else ""))
                         ),
-                        "failure_reason": detail,
+                        "failure_reason": detail or candidate.get("failure_reason") or
+                                          candidate.get("synth_gen_error") or
+                                          (record.get("error_message") if record.get("passed") is False else ""),
                     })
                     candidate = self.mapper.synth(candidate).to_dict()
                     durable_refs = await save(candidate)

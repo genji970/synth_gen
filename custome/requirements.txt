@@ -14,3 +14,5 @@ tensordict==0.9.1
 ray[default,cgraph]==2.46.0
 tokenizers==0.21.2
 opencv-python-headless==4.11.0.86
+
+pytest

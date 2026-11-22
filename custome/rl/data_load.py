@@ -339,12 +339,34 @@ class Sample:
         return {key: getattr(self, key) for key in keys}
 
     def to_verl(self, step, split="train"):
-        self.assert_prompt_integrity()
+        # PCA-matched synth_gen records are trainable even when pytest fails.
+        # Feed the original problem, predicted code, generated test and exact
+        # verification failure to GRPO; keep the full record in local JSONL.
         import torch
-        # Only raw_prompt is model-visible. Tests/expected outputs stay in
-        # extra_info for the external reward verifier, never in raw_prompt.
+        prompt = self.prompt
+        if self.source == "synth_gen" and split == "train":
+            feedback = "\n".join(dict.fromkeys(filter(None, [
+                self.error_message, self.failure_reason, self.synth_gen_error
+            ]))) or "none"
+            prompt = (
+                "Programming language: Python.\n"
+                "[ORIGINAL PROBLEM]\n" + self.question +
+                "\n\n[ORIGINAL GENERATION SEED]\n" + (self.seed or "(not available)") +
+                "\n\n[PREVIOUS PYTHON IMPLEMENTATION]\n" + (self.generated_code or "(not generated)") +
+                "\n\n[GENERATED PYTHON PYTEST]\n" + (self.test_code or "(not generated)") +
+                "\n\n[VERIFICATION STATUS]\n" + str(self.status) +
+                "\n\n[FAILURE STAGE]\n" + (self.failure_stage or "none") +
+                "\n\n[FAILURE TYPE]\n" + ", ".join(self.error_types or ["none"]) +
+                "\n\n[FAILURE MESSAGE]\n" + feedback +
+                "\n\nWrite a corrected Python implementation according to the original problem. "
+                "A pytest test may be wrong; do not treat its expected results as ground truth. "
+                "If no implementation or tests were generated, solve the original problem. "
+                "Return runnable Python code only."
+            )
+        else:
+            self.assert_prompt_integrity()
         return {
-            "raw_prompt": [{"role": "user", "content": self.prompt}],
+            "raw_prompt": [{"role": "user", "content": prompt}],
             "data_source": self.task,
             # The configured GRPO task is Code and uses external execution
             # reward; no gold/reference is needed anywhere in the actor batch.

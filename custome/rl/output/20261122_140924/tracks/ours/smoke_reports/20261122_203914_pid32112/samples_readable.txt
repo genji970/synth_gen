@@ -1,0 +1,347 @@
+
+================ SAMPLE 1/4 ================
+[1] SEED: Fibonacci with a twist.
+[2] QUESTION / PROBLEM:
+UNAVAILABLE: synth_gen terminated before yielding a problem
+[3] MODEL PREDICTION / CODE:
+import math
+from functools import lru_cache
+
+# Define a helper function to compute Fibonacci modulo p
+def fibonacci_mod_p(n, p):
+    if n < 0:
+        return 0
+    
+    @lru_cache(maxsize=None)
+    def fib(n, p):
+        if n <= 1:
+            return n
+        
+        a, b = 0, 1
+        for _ in range(2, n+1):
+            a, b = b, (a + b) % p
+        return b
+    
+    return fib(n, p)
+
+# Example usage
+print(fibonacci_mod_p(1, 5))       # Output: (1, 5)
+print(fibonacci_mod_p(4, 5))       # Output: (3, 5)
+print(fibonacci_mod_p(5, 7))       # Output: (2, 7)
+[4] GENERATED PYTEST:
+import pytest
+
+# Global helper function provided by the problem statement
+def fib_with_modulo(n, p):
+    # Implementing the iterative version of Fibonacci calculation with modulo
+    a, b = 0, 1
+    for _ in range(n):
+        a, b = b, (a + b) % p
+    return b
+
+# Test suite
+@pytest.mark.parametrize(
+    "n,p,expected",
+    [
+        (-1, 101, 0),  # Negative case
+        (0, 101, 0),   # Base case
+        (1, 101, 1),   # Base case
+        (5, 101, 5),   # Smaller n
+        (10, 101, 55), # Larger n
+    ]
+)
+def test_fibonacci_mod_p(n, p, expected):
+    assert fib_with_modulo(n, p) == expected
+[5] VERDICTS:
+  synth_gen: FAIL | failed_verifier=GeneratedPytestInputGuard
+  Podman pytest: SKIPPED | status=invalid_test | invalid input before execution
+  FINAL: 정답 여부 미판정 — 생성된 테스트 자체가 유효하지 않음 — 코드 정오 미판정
+[6] FAILURE REASON / EVIDENCE:
+  synth_gen: ValueError: InvalidGeneratedTest: after 3 attempts: Generated test never calls the model-predicted function
+  pytest: Generated test never calls the model-predicted function
+[7] WHAT TO FIX / CHECK:
+  아래 테스트 생성 오류를 수정. 이 샘플은 학습에 채택하지 않음
+  *수동 테스트: PCA 미검사 / RL 학습 미실행*
+  Full raw JSONL: /root/synth_gen/custome/rl/output/20261122_140924/tracks/ours/generated_code.jsonl
+
+
+================ SAMPLE 2/4 ================
+[1] SEED: Fibonacci with a twist.
+[2] QUESTION / PROBLEM:
+### Problem Statement:
+
+Given two positive integers \(a\) and \(b\), implement a function to compute the Fibonacci sequence up to the \(n\)-th term where each term is multiplied by either \(a\) or \(b\). The function should return a list of these terms. Ensure that if both \(a\) and \(b\) are non-zero, the resulting list will contain at least one element from each operation.
+
+#### Function Signature:
+Function signature: def fibonacci_twist(a: int, b: int, n: int) -> List[int]
+
+#### Constraints:
+- `2 <= a, b <= 5`
+- `1 <= n <= 10^4`
+[3] MODEL PREDICTION / CODE:
+def fibonacci_twist(a: int, b: int, n: int) -> List[int]:  # Explicitly declare the type of result as List[int]
+    """
+    Calculate the first 'n' terms of the modified Fibonacci sequence,
+    where each term is multiplied by either 'a' or 'b'.
+    If both 'a' and 'b' are not zero, include at least one term from each multiplication.
+
+    :param a: A positive integer representing the multiplier for odd positions
+    :param b: A positive integer representing the multiplier for even positions
+    :param n: An integer indicating how many terms of the sequence to generate
+
+    :return: A list containing the first 'n' terms of the modified Fibonacci sequence.
+    """
+    
+    # Initialize variables
+    fib = [0, 1]  # Start with the first two numbers in the Fibonacci sequence
+    result = []  # Use an empty list to store the terms
+    
+    # Iterate through the desired number of terms
+    while len(result) < n:
+        next_term = a * fib[-2] + b * fib[-3]
+        
+        # Append current term to the result list
+        result.append(next_term)
+        
+        # Update the previous three terms based on the calculated next term
+        fib = [fib[1], next_term, fib[0]]
+    
+    return result
+
+
+# Example usage and testing with Pytest
+import pytest
+
+def check_fibonacci_twist():
+    assert fibonacci_twist(2, 3, 6) == [2, 2, 8, 9, 26, 33], "Test case 1 failed"
+    assert fibonacci_twist(1, -1, 7) == [1, -1, 2, 2, 5, 6, 11], "Test case 2 failed"
+    print("All test cases passed!")
+
+check_fibonacci_twist()
+[4] GENERATED PYTEST:
+(테스트 없음)
+[5] VERDICTS:
+  synth_gen: FAIL | failed_verifier=MypyVerifier
+  Podman pytest: SKIPPED | status=no_tests | invalid input before execution
+  FINAL: 정답 여부 미판정 — 테스트 코드 없음
+[6] FAILURE REASON / EVIDENCE:
+  synth_gen: solution.py:16: error: Need type annotation for "result" (hint: "result: list[<type>] = ...")  [var-annotated]
+Found 1 error in 1 file (checked 1 source file)
+  pytest: No executable generated tests
+[7] WHAT TO FIX / CHECK:
+  테스트 생성 단계를 확인하고, 테스트가 만들어지기 전에는 학습에 사용하지 말 것
+  *수동 테스트: PCA 미검사 / RL 학습 미실행*
+  Full raw JSONL: /root/synth_gen/custome/rl/output/20261122_140924/tracks/ours/generated_code.jsonl
+
+
+================ SAMPLE 3/4 ================
+[1] SEED: Fibonacci with a twist.
+[2] QUESTION / PROBLEM:
+UNAVAILABLE: synth_gen terminated before yielding a problem
+[3] MODEL PREDICTION / CODE:
+def twisted_fib(n):
+    """
+    Calculate the nth twisted Fibonacci number where each pair of consecutive numbers has their sum increased by 1.
+    
+    Args:
+        n (int): The position in the sequence
+    
+    Returns:
+        int: The nth twisted Fibonacci number modulo 1000000007
+    
+    Edge cases:
+        - twisted_fib(2) = 3
+        - twisted_fib(3) = 5
+        - twisted_fib(4) = 8
+        - twisted_fib(5) = 13
+        - twisted_fib(6) = 21
+    """
+
+    def fib_mod(x, y, mod=1000000007):
+        """Calculate fibonacci sequence modulo m"""
+        
+        if x == 0:
+            return 0
+        elif x == 1:
+            return 1
+        
+        prev, curr = 0, 1
+        i = 2
+        
+        while i <= y:
+            next_val = (prev + curr) % mod
+            prev, curr = curr, next_val
+            i += 1
+            
+        return curr % mod
+
+    # Initialize the base case values
+    if n == 0:
+        return 0 % 1000000007
+    elif n == 1:
+        return 1 % 1000000007
+
+    # Base cases for initial few terms
+    if n < 6:
+        return fib_mod(n - 1, n - 2) + fib_mod(n - 1, n - 2)
+
+    # Use dynamic programming to avoid redundant calculations
+    dp = {}
+    dp[0], dp[1] = 0, 1
+
+    # Iterative way to calculate the nth twisted fibonacci number
+    for i in range(2, n + 1):
+        # If the value for i is not yet computed, calculate it
+        if i not in dp:
+            dp[i] = (fib_mod(i - 1, i) + fib_mod(i - 2, i)) % 1000000007
+        else:
+            # If already computed, use the cached value
+            pass
+
+    return dp[n]
+
+# Check function to verify the correctness of the generated function
+def check():
+    assert twisted_fib(0) == 0
+    assert twisted_fib(1) == 1
+    assert twisted_fib(2) == 3
+    assert twisted_fib(3) == 5
+    assert twisted_fib(4) == 8
+    assert twisted_fib(5) == 13
+    assert twisted_fib(6) == 21
+
+check()
+[4] GENERATED PYTEST:
+# This module contains the global function 'twisted_fib' which implements the solution.
+import functools
+
+
+@functools.lru_cache(maxsize=None)
+def twisted_fib(n):
+    if n == 0:
+        return 0
+    elif n == 1:
+        return 1
+    else:
+        return (twisted_fib(n - 1) + twisted_fib(n - 2)) % 1000000007
+
+
+def test_twisted_fib():
+    # Provided data points to verify correctness
+    assert twisted_fib(0) == 0
+    assert twisted_fib(1) == 1
+    assert twisted_fib(2) == 3
+    assert twisted_fib(3) == 5
+    assert twisted_fib(4) == 8
+    assert twisted_fib(5) == 13
+    assert twisted_fib(6) == 21
+    print("All test cases passed successfully.")
+[5] VERDICTS:
+  synth_gen: FAIL | failed_verifier=GeneratedPytestInputGuard
+  Podman pytest: SKIPPED | status=invalid_test | invalid input before execution
+  FINAL: 정답 여부 미판정 — 생성된 테스트 자체가 유효하지 않음 — 코드 정오 미판정
+[6] FAILURE REASON / EVIDENCE:
+  synth_gen: ValueError: InvalidGeneratedTest: after 3 attempts: Test redefines predicted function(s): twisted_fib
+  pytest: Test redefines predicted function(s): twisted_fib
+[7] WHAT TO FIX / CHECK:
+  아래 테스트 생성 오류를 수정. 이 샘플은 학습에 채택하지 않음
+  *수동 테스트: PCA 미검사 / RL 학습 미실행*
+  Full raw JSONL: /root/synth_gen/custome/rl/output/20261122_140924/tracks/ours/generated_code.jsonl
+
+
+================ SAMPLE 4/4 ================
+[1] SEED: Fibonacci with a twist.
+[2] QUESTION / PROBLEM:
+**Problem Statement:**
+
+Write a function `fibonacci_with_twist(n)` that calculates the n-th term of a modified Fibonacci sequence where each term is the sum of the previous two terms plus their position in the sequence. The first term is always 2, and the second term is always 3. 
+
+For example:
+- `fibonacci_with_twist(5)` should return 19 because the sequence starts with [2, 3] and follows the rule \(a_n = a_{n-1} + a_{n-2} + n\), so the fifth term is \(2 + 3 + 5 = 10\).
+- `fibonacci_with_twist(6)` should return 41 because the sixth term is \(3 + 10 + 7 = 20\).
+
+**Function Signature:** 
+Function signature: def fibonacci_with_twist(n: int) -> int
+
+**Edge Cases:**
+- If `n` is less than 1, the function should raise a ValueError with message "Index out of bounds".
+- For very large values of `n`, consider optimizing the computation to avoid overflow issues.
+[3] MODEL PREDICTION / CODE:
+import sys
+
+def fibonacci_with_twist(n: int) -> int:
+    """
+    Calculate the n-th term of a modified Fibonacci sequence where each term is the sum of the
+    previous two terms plus their position in the sequence.
+    
+    Args:
+    - n (int): The index of the term in the sequence
+    
+    Returns:
+    - int: The n-th term of the sequence
+    
+    Raises:
+    - ValueError: If n is less than 1
+    """
+    if n < 1:
+        raise ValueError("Index out of bounds")
+    
+    # Base cases for the first two terms
+    a, b = 2, 3
+
+    # Iterate starting from the third term up to n
+    for _ in range(2, n):
+        # Compute the next term using the given formula
+        current_term = a + b + n
+        
+        # Update a and b for the next iteration
+        a, b = b, current_term
+
+    return b
+
+
+# Directly define the expected results for each test case
+expected_results = {
+    5: 19,
+    6: 41,
+    0: None  # This will fail due to value error but serves as an example
+}
+
+for index, expected in expected_results.items():
+    if index > 0:
+        try:
+            result = fibonacci_with_twist(index)
+            assert result == expected
+        except AssertionError as e:
+            print(f"Failed at index {index}: {e}")
+    else:
+        print(f"Skipped validation at index {index}, raised ValueError.")
+[4] GENERATED PYTEST:
+test_negative_index():
+    with pytest.raises(ValueError):
+        fibonacci_with_twist(-1)
+
+test_zero_index():
+    assert fibonacci_with_twist(0) == 2
+
+test_one_index():
+    assert fibonacci_with_twist(1) == 3
+
+test_small_input():
+    assert fibonacci_with_twist(5) == 19
+
+test_large_input():
+    assert fibonacci_with_twist(10) == 10946
+[5] VERDICTS:
+  synth_gen: FAIL | failed_verifier=PythonTestBasedVerifier
+  Podman pytest: SKIPPED | status=invalid_test | invalid input before execution
+  FINAL: 정답 여부 미판정 — 생성된 테스트 자체가 유효하지 않음 — 코드 정오 미판정
+[6] FAILURE REASON / EVIDENCE:
+  synth_gen: InvalidGeneratedTest: Python syntax error in code or test: invalid syntax (<unknown>, line 1)
+  pytest: Python syntax error in code or test: invalid syntax (<unknown>, line 1)
+[7] WHAT TO FIX / CHECK:
+  아래 테스트 생성 오류를 수정. 이 샘플은 학습에 채택하지 않음
+  WARNING: 테스트가 pytest를 사용하지만 import pytest가 없음
+  *수동 테스트: PCA 미검사 / RL 학습 미실행*
+  Full raw JSONL: /root/synth_gen/custome/rl/output/20261122_140924/tracks/ours/generated_code.jsonl
+

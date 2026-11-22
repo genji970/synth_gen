@@ -9,7 +9,9 @@ Standalone smoke test (does not launch training):
 """
 from __future__ import annotations
 
+import ast
 import gc
+import re
 import multiprocessing as mp
 import os
 import traceback
@@ -43,22 +45,48 @@ def synth_problem_instruction(seed):
 
 
 
+def _prose_function_signatures(problem):
+    """Convert signature-only fenced snippets to prose; never permit implementations."""
+    def convert(match):
+        source = match.group(1).strip()
+        try:
+            tree = ast.parse(source)
+        except SyntaxError:
+            return match.group(0)
+        if len(tree.body) != 1 or not isinstance(tree.body[0], (ast.FunctionDef, ast.AsyncFunctionDef)):
+            return match.group(0)
+        fn = tree.body[0]
+        body = fn.body
+        if len(body) != 1 or not (
+            isinstance(body[0], ast.Pass)
+            or isinstance(body[0], ast.Expr) and (
+                isinstance(body[0].value, ast.Constant) and (
+                    isinstance(body[0].value.value, str) or body[0].value.value is Ellipsis
+                )
+            )
+        ):
+            return match.group(0)
+        signature = source.splitlines()[0].strip()
+        if not signature.startswith(("def ", "async def ")) or not signature.endswith(":"):
+            return match.group(0)
+        return "Function signature: " + signature[:-1]
+    return re.sub(r"```(?:python|py)\s*\n(.*?)```", convert, problem, flags=re.I | re.S)
+
+
 def synth_pytest_instruction(problem, predicted_code, signature="", feedback=""):
-    """Build a *text-only* test request: the solution is untrusted evidence,
-    never an oracle. The question defines the expected behavior.
-    """
+    """Build pytest instructions from the problem and signature only."""
     return (
-        "Write executable pytest tests for the Python programming problem below. "
-        "The supplied implementation is the MODEL'S UNVERIFIED PREDICTION, "
-        "NOT a correct reference solution. Its outputs may be wrong.\n\n"
+        "Programming language: Python. Write executable Python pytest tests for the problem below. "
         "[PROBLEM SPECIFICATION / SOURCE OF TRUTH]\n"
         + prompt_content(problem).strip()
-        + "\n\n[MODEL-PREDICTED PYTHON CODE / UNTRUSTED]\n"
-        + prompt_content(predicted_code).strip()
         + "\n\n[EXPECTED FUNCTION SIGNATURE]\n"
         + prompt_content(signature).strip()
         + "\n\n[TASK]\n"
         "Return ONLY runnable Python pytest test code (no prose or Markdown fences).\n"
+        "The implementation already exists in the test runtime as a global function. "
+        "Do NOT implement it, stub it, mock it, or import a second copy. "
+        "Only define functions whose names start with test_. "
+        "Write assertions calling that existing global function directly.\n"
         "Rules:\n"
         "1. Test the implementation against the PROBLEM requirements, not against its own output.\n"
         "2. Derive expected answers independently from the problem specification. "
@@ -78,7 +106,7 @@ def synth_pytest_instruction(problem, predicted_code, signature="", feedback="")
 
 def generate_pytest_for_prediction(problem, predicted_code, llm, signature="",
                                     call_model=None, attempts=None, audit=None):
-    """Use the current actor to generate tests from PROBLEM + PREDICTION.
+    """Use the current actor to generate tests from PROBLEM + SIGNATURE.
 
     Reject syntactically invalid, vacuous, self-oracling, or otherwise clearly
     unsound generated tests before ever executing them in Podman. The checker
@@ -267,7 +295,9 @@ class VerifiedCodeGenerator:
                 dialogs = [{
                     "role": "assistant" if m.type == "ai" else
                             "system" if m.type == "system" else "user",
-                    "content": prompt_content(m),
+                    "content": ("Programming language: Python. Generate only Python code; "
+                                "all test code must use Python pytest.\n" + prompt_content(m))
+                               if m.type == "human" else prompt_content(m),
                 } for m in messages]
                 Progress.log("synth-llm", "tokenizing request", step=getattr(owner, "current_step", "?"), attempt=getattr(owner, "current_attempt", "?"), message_count=len(dialogs))
                 encoded = owner.tokenizer.apply_chat_template(
@@ -310,6 +340,7 @@ class VerifiedCodeGenerator:
                         synth_problem_instruction(seed_text),
                         extract_triple_backtick=False,
                     )).strip()
+                    text = _prose_function_signatures(text)
                     reason = problem_leak_reason(text)
                     if not reason:
                         generation.problem = text
@@ -371,9 +402,7 @@ class VerifiedCodeGenerator:
                 Progress.log("synth-verify", "checking", verifier=verifier_name)
                 try:
                     if verifier_name == "PythonTestBasedVerifier":
-                        # Synth_gen's default generate_programming_test(problem,
-                        # signature) does NOT include the model-predicted code.
-                        # Create a test using the question and actual prediction.
+                        # Generate tests from the problem and signature only.
                         owner._active_test_record = record
                         if not getattr(record, "test_code", None):
                             from synth_gen.generation.LLM_based_parsing import extract_programming_function_signature
@@ -391,7 +420,7 @@ class VerifiedCodeGenerator:
                                 "verifier": "GeneratedPytestInputGuard", "event": "pytest_generated",
                                 "problem": problem, "code": predicted_code,
                                 "test_code": record.test_code, "passed": True,
-                                "prompt_basis": "problem_and_unverified_prediction",
+                                "prompt_basis": "problem_and_signature",
                             })
                         result = check(record, llm=generator.llm)
                     else:

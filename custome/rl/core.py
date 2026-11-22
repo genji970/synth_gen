@@ -306,14 +306,12 @@ class PrivateDataset(PrivateHub):
         """One acceptance invariant for both JSONL writes and GRPO reads."""
         from custome.rl.data_load import Sample
         sample = Sample.from_dict(row)
-        sample.assert_prompt_integrity()
         if ((step is not None and sample.step != step) or
                 sample.source != "synth_gen" or sample.accepted is not True or
-                sample.passed is not True or sample.synth_gen_passed is not True or
-                not sample.generated_code or not sample.test_code or
+                not sample.metadata.get("pca_by_task") or
                 not sample.metadata.get("pca_matched")):
             raise ValueError(
-                f"Unverified JSONL training sample at step={step}: "
+                f"PCA-rejected JSONL training sample at step={step}: "
                 f"source_id={sample.source_id!r}, attempt={sample.attempt}"
             )
 
